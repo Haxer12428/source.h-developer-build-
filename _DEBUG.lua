@@ -1,5 +1,8 @@
 events.render:set(
     function () 
+        if true then 
+            return end 
+            
         local start = vector(150, 230); 
         local antiaim_info = FW.angles["=>"].get_antiaimInfo(); 
         

@@ -22,7 +22,6 @@ FW.wGL = {
                         position + size,
                         clr,
                         rounding  
-
                     )
 
                 end; 
@@ -61,6 +60,15 @@ FW.wGL = {
 
                     __data.__main.move.active = true; 
                     __data.__main.move.position = mouse_from; 
+                end;  
+                
+                visibility_change = function (__data)
+                    local key = __data.__main.visibility_change.key; 
+
+                    if (not FW.userInput["=>"].key_press(key) or not __data.__main.inputs.allow_visibility_change) then 
+                        return end 
+                        
+                    __data.__main.visibility_change.visible = FW.math["=>"].opposite_bool(__data.__main.visibility_change.visible); 
                 end; 
 
             };  
@@ -72,8 +80,10 @@ FW.wGL = {
 
                     for _, object in pairs(object_list) do 
                         for fn, f in pairs(object.__run) do 
+
+                            local arguments = {structure = __data; object_structure = object.__storage}; 
                             
-                            local call = f(object.__storage); 
+                            local call = f(arguments); 
                             if (call ~= 0) then 
                                 error("[wGL] Object function '" .. fn .. "' error.", 1); end
                         end; end 
@@ -85,21 +95,18 @@ FW.wGL = {
 
                 events.render:set(
                     function () 
-                        self.handlers:move(__data); 
+                        self.handlers.visibility_change(__data); 
+
+                        if (not __data.__main.visibility_change.visible) then 
+                            return end 
+
                         self.render.default_box(__data); 
                         self.object_system:main(__data); 
+                        self.handlers:move(__data); 
                     end)  
 
             end; 
 
-        }; 
-
-        object_structure = {
-            __run = {
-                main = function ()
-                    return 0; 
-                end; }; 
-            __storage = {}; 
         }; 
 
     }; 
@@ -112,29 +119,44 @@ FW.wGL = {
                 __data = { 
                     __main = {
                         position = vector(300, 300); 
-                        size = vector(0, 0);
+                        size = vector(1000, 1000);
                         color = color(0, 0, 0, 0); 
                         rounding = 0; 
 
                         inputs = {
                             allow_move = false; 
+                            block_input = true; 
+                            allow_visibility_change = false; 
                         }; 
 
                         move = {
                             position = vector(0, 0); 
                             active = false; 
+                        }; 
+
+                        visibility_change = {
+                            key = 200; 
+                            visible = true; 
                         }
+
                     }; 
 
                     __objects = {}; 
                 }; }; 
 
-            return setmetatable(tbl, nil); 
+            return tbl; 
         end;  
 
         new_object = function (structure) 
-            local object_struct = setmetatable(FW.wGL._.object_structure, nil); 
-            structure.__data.__objects[#structure.__data.__objects+1] = object_struct; 
+            local object_structure = {
+                __run = {
+                    main = function ()
+                        return 0; 
+                    end; }; 
+                __storage = {}; 
+            }; 
+
+            structure.__data.__objects[#structure.__data.__objects+1] = object_structure; 
 
             return structure.__data.__objects[#structure.__data.__objects]; 
         end; 
@@ -157,7 +179,27 @@ FW.wGL = {
 
         allow_move = function (structure, state)
             structure.__data.__main.inputs.allow_move = state; 
+        end;   
+
+        block_input = function (structure, state) 
+            structure.__data.__main.inputs.block_input = state; 
         end;  
+
+        allow_visibility_change = function (structure, state)
+            structure.__data.__main.inputs.allow_visibility_change = state; 
+        end;  
+
+        set_visibility_change_key = function (structure, num) 
+            structure.__data.__main.visibility_change.key = num; 
+        end;  
+
+        get_position = function (structure)
+            return structure.__data.__main.position; 
+        end; 
+
+        get_size = function (structure) 
+            return structure.__data.__main.size; 
+        end;
 
     }
 }   

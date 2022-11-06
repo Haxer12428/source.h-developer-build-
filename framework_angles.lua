@@ -11,29 +11,38 @@ FW.angles = {
             fakeangle = {
 
                 realOn = 0; 
-                modifier = 30/2; 
-                randomization = 20; 
+                modifier = 45/2; 
+                randomization = 120; 
                 desync_randomization = 0; 
-                pitch = 89.98; 
-                inverter = false; 
+                pitch = 89.96; 
+                inverter = true; 
                 jitter_speed = 4; 
 
                 yaw = {
 
-                    [false] = -17;
-                    [true] = 22; 
+                    [false] = 0;
+                    [true] = 19; 
 
                 }; 
 
                 desync = {
 
-                    [false] = 58; 
-                    [true] = 58; 
+                    [false] = 55; 
+                    [true] = 55; 
+
+                }; 
+
+                body_yaw_add = { 
+
+                    [false] = 5; 
+                    [true] = -5; 
 
                 }; 
 
                 on_shot = "opposite-state"; 
                 final_desync = 0; 
+
+                lastRealOn = 0; 
 
             }
 
@@ -49,7 +58,8 @@ FW.angles = {
                 if (threat_hittable ~= nil) then 
                     local threat_hittable_info = threat_hittable:get_network_state(); 
                     if (threat_hittable_info == 0) then 
-                        return threat; end; end 
+                        return threat; 
+                    end; end 
 
                 if ( screen.closest_enemy == nil ) then 
 
@@ -64,7 +74,7 @@ FW.angles = {
 
                 end; 
 
-                if (world.closest_distance < 140) then 
+                if (world.closest_distance < 40) then 
                     return world.closest_enemy; end 
 
                 if (world.closest_enemy == screen.closest_enemy) then 
@@ -152,6 +162,8 @@ FW.angles = {
                 local packet = cmd.command_number % (10 - FW.angles._.storage.fakeangle.jitter_speed*2); 
                 local random = cmd.command_number % FW.angles._.storage.fakeangle.randomization; 
 
+                if (random == 1) then 
+                    return end 
                 
                 if (2 < cmd.choked_commands) then 
                     packet = 10; end 
@@ -159,8 +171,8 @@ FW.angles = {
                 if (packet == invert) then 
                     return end 
 
-                ui.find("Aimbot", "Anti Aim", "Misc", "Leg Movement"):set("Sliding");
                 FW.angles._.storage.fakeangle.inverter = FW.math["=>"].opposite_bool(FW.angles._.storage.fakeangle.inverter);
+                FW.angles._.storage.fakeangle.lastRealOn = FW.angles._.storage.fakeangle.realOn; 
             end;   
 
             getDesyncAngle = function (cmd) 
@@ -176,10 +188,12 @@ FW.angles = {
                 offset = inverter and -offset or offset;  
 
                 local realoffset = (60 - ds);
-                realoffset = inverter and -realoffset or realoffset; 
+                realoffset = inverter and -realoffset or realoffset;  
+
+                offset = offset + fakeangle.body_yaw_add[inverter];
 
                 return { 
-                    desynced = offset; 
+                    desynced = offset/2; 
                     real = realoffset/2; 
                 }
             end; 
@@ -244,7 +258,7 @@ FW.angles = {
             end;  
 
             changeUpdateEveryRound = function () 
-                FW.angles._.storage.fakeangle.randomization = utils.random_int(12, 19);
+                --FW.angles._.storage.fakeangle.randomization = utils.random_int(128, 130);
                 FW.angles._.storage.fakeangle.realOn = FW.math["=>"].opposite1BitInt(FW.angles._.storage.fakeangle.realOn);
                 FW.angles._.storage.fakeangle.inverter = FW.math["=>"].opposite_bool(FW.angles._.storage.fakeangle.inverter); 
             end;  
@@ -258,7 +272,7 @@ FW.angles = {
                     self.m_getTarget:main(cmd); 
                     self.m_fakeAngle.inverter(cmd); 
                     self.m_fakeAngle:applyAngles(cmd); 
-                end); 
+                end);
 
             events.round_prestart:set(
                 function () 
@@ -287,5 +301,37 @@ FW.angles = {
     }
 
 }; 
+
+local new = ui.create("Body Yaw"); 
+local storage = FW.angles._.storage.fakeangle
+
+local modifier = new:slider("Offset | Modifier", -180, 180, 0); 
+local yaw_left = new:slider("Offset | Left", -60, 60, 0); 
+local yaw_right = new:slider("Offset | Right", -60, 60, 0); 
+
+local body_yaw_add_left = new:slider("Body Yaw | Add Left", -60, 60, 0); 
+local body_yaw_add_right = new:slider("Body Yaw | Add Right", -60, 60, 0);  
+
+local desync_left = new:slider("Body Yaw | Left Limit", 0, 60, 60); 
+local desync_right = new:slider("Body Yaw | Right Limit", 0, 60, 60); 
+
+local randomization = new:slider("Body Yaw | Randomization", 0, 500, 120); 
+
+events.runtime:set(
+    function() 
+        storage.body_yaw_add[false] = body_yaw_add_left:get();
+        storage.body_yaw_add[true] = body_yaw_add_right:get();
+
+        storage.modifier = modifier:get()/2; 
+        storage.yaw[false] = yaw_left:get();
+        storage.yaw[true] = yaw_right:get(); 
+
+        storage.desync[false] = desync_left:get();
+        storage.desync[true] = desync_right:get(); 
+
+        storage.randomization = randomization:get();
+
+    end)
+
 
 FW.angles._:init(); 
