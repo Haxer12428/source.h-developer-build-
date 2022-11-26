@@ -44,7 +44,18 @@ FW.entity = {
 
         get_activeEnemies = function (dormancy) 
             return dormancy and FW.entity._.storage.enemies_activeIncludeDormant or FW.entity._.storage.enemies_active; 
-        end 
+        end; 
+
+        get_serverPing = function (ent) 
+            return ent:get_resource().m_iPing; 
+        end; 
+
+        get_maximumBacktrackTime = function (self, ent) --ms (not 100% sure)
+            local server_ping = self.get_serverPing(ent); 
+            local velocity = FW.localPlayer['=>'].get_velocity(); 
+            return math.min(server_ping, velocity); 
+        end;
+        
     }
 
 }; 

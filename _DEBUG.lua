@@ -1,11 +1,11 @@
 events.render:set(
     function () 
-        if true then 
-            return end 
             
         local start = vector(150, 230); 
         local antiaim_info = FW.angles["=>"].get_antiaimInfo(); 
         
+
+        local lp = entity.get_local_player(); 
 
         local debug_elements = {
 
@@ -42,3 +42,4 @@ events.render:set(
         end
 
     end)
+

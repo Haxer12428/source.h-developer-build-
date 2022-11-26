@@ -94,14 +94,13 @@ global.gui = {
 
                 struct = {
 
-                    tab = function (element) 
+                    tab = function (element, gui_struct) 
                         local g = element.__global; 
                         if (not g.visible) then 
                             return end 
 
                         local name = g.name; 
                         g.__run:init(element); 
-
                     end; 
 
                 };
@@ -113,7 +112,7 @@ global.gui = {
 
                         for _, element in pairs(self.__data.list) do 
 
-                            self.struct["tab"](element); 
+                            self.struct["tab"](element, gui_struct); 
 
                         end; return 0; end; 
 
@@ -174,13 +173,20 @@ global.gui = {
 
                         __run = {
 
-                            get_size = function () 
-                                
-                            end;
+                            get_position = function (struct) 
 
-                            init = function (self, element)
+                                local gui_position = FW.wGL["=>"].get_position(struct); 
+                                local gui_size = FW.wGL["=>"].get_size(struct); 
+
+                                local start_renderPosition = global.gui._.settings.vectors.elements_render_start; 
+
+                                local available_size = global.gui._.settings.vectors.
+
+                            end; 
+
+                            init = function (self, element, gui_struct)
                                 
-                                print("Im initializer in element with name: ", element.__global.name);
+                                self.get_position(gui_struct); 
 
                             end; 
 
