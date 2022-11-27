@@ -208,7 +208,7 @@ FW.angles = {
                 local random = cmd.command_number % FW.angles._.storage.fakeangle.randomization; 
 
                 if (random == 1 or random == 0) then 
-                    FW.angles._.storage.fakeangle.realOn = FW.math['=>'].opposite1BitInt(FW.angles._.storage.fakeangle.realOn); end 
+                    return end 
 
                 if (FW.angles._.storage.fakeangle.last_switch == cmd.command_number) then 
                     return end 
@@ -347,7 +347,6 @@ FW.angles = {
             changeUpdateEveryRound = function () 
                 --FW.angles._.storage.fakeangle.randomization = utils.random_int(128, 130);
                 FW.angles._.storage.fakeangle.realOn = FW.math["=>"].opposite1BitInt(FW.angles._.storage.fakeangle.realOn);
-                FW.angles._.storage.fakeangle.inverter = FW.math["=>"].opposite_bool(FW.angles._.storage.fakeangle.inverter); 
             end;   
 
             handle_onshot = function () 
@@ -363,9 +362,6 @@ FW.angles = {
                 if (FW.GameVars["=>"]:get_enabledExploit() == "HS") then 
                     return end 
 
-                fakeangle.jitter_speed = 1; 
-                fakeangle.yaw[false] = utils.random_int(-20, 20); 
-                fakeangle.yaw[true] = utils.random_int(-20, 20); 
                 fakeangle.desync[false] = utils.random_int(0, 90); 
                 fakeangle.desync[true] = utils.random_int(0, 80);
             end; 
