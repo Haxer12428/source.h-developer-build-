@@ -21,6 +21,7 @@ FW.angles = {
                 desync_randomization = 0; 
                 pitch = 89.98; 
                 inverter = true; 
+                modifier_inverter = true; 
                 jitter_speed = 4; 
                 
                 packet = 0; 
@@ -56,6 +57,20 @@ FW.angles = {
 
                 onshot_till = 0; 
 
+                quick_jitter = false;  
+
+                lagcomp = {
+                    enabled = true; 
+                    strenght = 4; 
+                    lastbreak = vector(0, 0);
+                    break_until = 0;  
+                    breakevery = 100; 
+                }; 
+
+                stop_inverters_till = 0;
+
+                onshot_mode = "Stop"
+
             }
 
         }; 
@@ -70,7 +85,7 @@ FW.angles = {
                 if (threat_hittable ~= nil) then 
                     local threat_hittable_info = threat_hittable:get_network_state(); 
                     if (threat_hittable_info == 0) then 
-                        return threat; 
+                        return threat_hittable; 
                     end; end 
 
                 if ( screen.closest_enemy == nil ) then 
@@ -102,7 +117,7 @@ FW.angles = {
                 if (target == nil) then
                     return render.camera_angles().y; end 
 
-                local origin = target:get_origin();
+                local origin = target:get_eye_position();
                 local my_origin = get_local_player():get_origin();
 
                 return FW.math["=>"].angle_between2Vectors(my_origin, origin);
@@ -184,6 +199,7 @@ FW.angles = {
                 local found = self:findBest(); 
                 local yaw = self.getYawToTarget(found); 
                 local is_resolved = self.is_resolvedByTarget(found);
+
                 
                 FW.angles._.storage.target = {
                     entity = found; 
@@ -196,200 +212,320 @@ FW.angles = {
 
         }; 
 
-        m_fakeAngle = {
+        body_yaw = { 
 
-            inverter = function (cmd) 
-                local invert = FW.angles._.storage.fakeangle.realOn; 
-                local jitter_speed = (10 - FW.angles._.storage.fakeangle.jitter_speed*2); 
+            modifier = {
 
-                if (jitter_speed < 0) then jitter_speed = math.abs(jitter_speed); end 
-
-                local packet = cmd.command_number % jitter_speed; 
-                local random = cmd.command_number % FW.angles._.storage.fakeangle.randomization; 
-
-                if (random == 1 or random == 0) then 
-                    return end 
-
-                if (FW.angles._.storage.fakeangle.last_switch == cmd.command_number) then 
-                    return end 
-
-                if (packet == FW.math['=>'].opposite1BitInt(invert) or cmd.choked_commands > 1) then 
-                    return end 
-
-                FW.angles._.storage.fakeangle.last_switch = cmd.command_number; 
-                FW.angles._.storage.fakeangle.inverter = FW.math["=>"].opposite_bool(FW.angles._.storage.fakeangle.inverter);
-                --FW.angles._.storage.fakeangle.lastRealOn = FW.angles._.storage.fakeangle.realOn; 
-            end;   
-
-            setDefaultAngles = function () 
-                local list = FW.GameVars['=>'].get_list(); 
-                local round_started = FW.game['=>'].get_varByName("round_started"); 
-                local fakeangle = FW.angles._.storage.fakeangle; 
-
-                local YAWMODE = round_started and "Backward" or "Disabled";  
-
-                --//FREESTAND (pseudo fix)  
-                if (FW.GameVars['=>'].get_var("FREESTAND", true) and round_started) then 
+                inverter = function (hook, body)
+                    local packet = hook.command_number % 2; 
                     
-                    list.BODYYAW:set(true); 
-                    list.PITCH:set("Down");
-                    list.YAWBASE:set("At Target");
-                    list.YAWMODE:set("Backward");
-                    list.MODIFIER:set("Center");
-                    list.MODIFIEROFFSET:set(-fakeangle.modifier*2);
+                    if (packet ~= body.realOn or hook.tickcount <= body.stop_inverters_till) then 
+                        return end 
 
-                    return; end 
-
-                list.BODYYAW:set(false);
-                list.MODIFIER:set("Disabled");
-                list.PITCH:set("Down");
-                list.YAWBASE:set("Local View");
-                list.YAWMODE:set(YAWMODE);
-                list.YAWOFFSET:set(0);
-                list.MODIFIEROFFSET:set(0);
-
-            end; 
-
-            getDesyncAngle = function (cmd) 
-                local fakeangle = FW.angles._.storage.fakeangle; 
-
-                local inverter = fakeangle.inverter; 
-
-                if (inverter == nil) then return {desynced = 0; real = 0;}; end 
-
-                local ds = fakeangle.desync[inverter]; 
-
-                local offset = 60 - ds;  
-                offset = inverter and -offset or offset;  
-
-                local realoffset = (60 - ds);
-                realoffset = inverter and -realoffset or realoffset;  
-
-                offset = offset + fakeangle.body_yaw_add[inverter];
-
-                if (math.abs(offset) > fakeangle.maximum_desync) then 
-                    fakeangle.maximum_desync = math.abs(offset); end 
-                
-                fakeangle.current_desync = math.abs(offset); 
-
-                return { 
-                    desynced = offset/2; 
-                    real = realoffset/2; 
-                }
-            end; 
-
-            getFinalAngle = function (self, cmd) 
-                local fakeangle = FW.angles._.storage.fakeangle; 
-
-                local inverter = fakeangle.inverter; 
-                local modifier = fakeangle.modifier; 
-                local packet = cmd.command_number % 2;  
-
-                local final_angle = inverter and modifier or -modifier; 
-
-                local desync_offsets = self.getDesyncAngle(cmd); 
-                FW.angles._.storage.fakeangle.final_desync = desync_offsets.desynced*2;
-
-                
-                local weap = entity.get_local_player():get_player_weapon(); 
-
-                if (packet ~= fakeangle.realOn and weap ~= nil and not weap:get_weapon_info().is_revolver) then 
-                    final_angle = final_angle + desync_offsets.desynced; else final_angle = final_angle - desync_offsets.real; end 
-
-                if (quick_jitter) then 
-                    final_angle =( inverter and modifier or -modifier)- desync_offsets.real; end 
-
-                return {
-                    angle = FW.angles._.storage.target.yaw + final_angle + fakeangle.yaw[inverter];
-                    quick_jitter = quick_jitter; 
-                }
-            end; 
-
-            canEnableAngles = function () 
-                local playerInfo = FW.localPlayer["=>"].info(); 
-                
-                if (playerInfo.nade_throwWait) then 
-                    return false; end 
-                if (playerInfo.manual_preShoot) then 
-                    return false; end 
-                if (playerInfo.on_ladder) then 
-                    return false; end 
-                if (playerInfo.on_use) then 
-                    return false; end 
-                if (not FW.game['=>'].get_varByName('round_started')) then 
-                    return false; end 
-                if (FW.GameVars["=>"].get_var("FREESTAND", true)) then 
-                    return false; end 
-                return true; 
-            end; 
-
-            applyAngles = function (self, cmd) 
-                if (not self.canEnableAngles()) then 
-                    return end 
-
-                local finalAngle = self:getFinalAngle(cmd); 
-                local real_on = FW.angles._.storage.fakeangle.realOn;  
-                
-                local packet = cmd.command_number % 2; 
-                FW.angles._.storage.fakeangle.packet = packet; 
-            
-                cmd.view_angles.x = FW.angles._.storage.fakeangle.pitch; 
-
-                if (packet == real_on) then 
-                    cmd.view_angles.y = finalAngle.angle; 
-                    return 
+                    body.modifier_inverter = FW.math['=>'].opposite_bool(body.modifier_inverter); 
                 end; 
+
+                get_animstateOffset = function () 
+                    local weight = 0; 
+                    local local_player = entity.get_local_player(); 
+                    local animstate = local_player:get_anim_state(); 
+
+                    weight = weight + animstate.acceleration_weight;
+                    weight = weight + animstate.move_weight;
+
+                    return weight;
+                end; 
+
+                set = function (self, hook, body) 
+                    local inverter = body.modifier_inverter; 
+                    local modifier = body.modifier; 
+                    local yaw = body.yaw[inverter]; 
+                    local animstate = self.get_animstateOffset(hook); 
+
+                    print(animstate)
+
+                    local angle = (inverter and modifier or -modifier) + yaw + animstate; 
+
+                    hook.view_angles.y = hook.view_angles.y + angle; 
+                end; 
+
+                handler = function (self, hook, body) 
+
+                    self:set(hook, body); 
+                    self.inverter(hook, body);
+
+                end; 
+
+                init = function (self) 
+                    return {
+                        hook = self.handler
+                    }
+                end; 
+
+            };
+            
+            yawbase = {
+
+                set = function (hook) 
+                    local target = FW.angles['=>'].get_targetInfo(); 
+                    local angles = target.yaw; 
                     
-                cmd.send_packet = false;  
-                cmd.view_angles.y = finalAngle.angle; 
-            end;  
+                    if (target.entity == nil) then 
+                        angles = render.camera_angles().y; end 
 
-            changeUpdateEveryRound = function () 
-                --FW.angles._.storage.fakeangle.randomization = utils.random_int(128, 130);
-                FW.angles._.storage.fakeangle.realOn = FW.math["=>"].opposite1BitInt(FW.angles._.storage.fakeangle.realOn);
-            end;   
+                    hook.view_angles.y = angles; 
+                    hook.view_angles.x = 89.90;
+                end; 
 
-            handle_onshot = function () 
-                local fakeangle = FW.angles._.storage.fakeangle; 
+                init = function (self) 
+                    return {
+                        hook = self.set; 
+                    }
+                end; 
 
-                if (fakeangle.onshot_till - 100 > globals.tickcount) then 
-                    fakeangle.onshot_till = 0;
-                    return end 
+            }; 
 
-                if (fakeangle.onshot_till < globals.tickcount) then 
-                    return end 
+            desync = {
 
-                if (FW.GameVars["=>"]:get_enabledExploit() == "HS") then 
-                    return end 
+                can_enable = function () 
+                    local local_player = entity.get_local_player(); 
+                    local weap = local_player:get_player_weapon(); 
+                    if (weap == nil) then 
+                        return false; end 
 
-                fakeangle.desync[false] = utils.random_int(0, 90); 
-                fakeangle.desync[true] = utils.random_int(0, 80);
-            end; 
+                    local weap_info = weap:get_weapon_info(); 
+                    if (weap_info.is_revolver) then 
+                        return false; end 
+
+                    return true; 
+                end; 
+
+                inverter = function (body, hook) 
+                    local packet = hook.command_number % 2; 
+
+                    if (packet ~= body.realOn or hook.tickcount <= body.stop_inverters_till) then 
+                        return end 
+
+                    body.inverter = FW.math['=>'].opposite_bool(body.inverter); 
+                end; 
+
+                get_finalDesyncAngle = function (body) 
+                    local inverter = body.inverter; 
+                    local desync = 50 - body.desync[body.modifier_inverter]; 
+                    local desync_add = body.body_yaw_add[inverter]; 
+                    
+                    if (desync < 0) then desync = inverter and -math.abs(desync) or math.abs(desync) end 
+
+                    local angle = inverter and -desync or desync; 
+                    angle = angle + desync_add/2
+
+                    return angle*2; 
+                end; 
+
+                update_info = function (self, body, hook)
+                    local angle = self.get_finalDesyncAngle(body); 
+
+                    body.current_desync = angle; 
+                    body.maximum_desync = math.max(math.abs(angle), body.maximum_desync);
+                end; 
+
+                set = function (self, body, hook) 
+                    local packet = hook.command_number % 2; 
+
+                    if (packet == body.realOn) then 
+                        return end 
+
+                    local angle = self.get_finalDesyncAngle(body); 
+                    
+                    if (not self.can_enable()) then 
+                        hook.send_packet = false; return end 
+
+                    local inverter = body.inverter; 
+
+                    print(inverter)
+
+                    hook.view_angles.y = hook.view_angles.y + angle; 
+                    hook.send_packet = false; 
+                end; 
+
+                handler = function (self, hook, body) 
+                    self.inverter(body, hook); 
+                    self:update_info(body, hook); 
+                    self:set(body, hook); 
+                end; 
+
+                init = function (self) 
+                    return {
+                        hook = self.handler
+                    }
+                end; 
+
+            };  
+
+            exploits = {
+
+                quick_jitter = function (hook, body) 
+                    local desync = body.desync[body.inverter]; 
+
+                    if (not body.quick_jitter or desync < 48) then 
+                        return end 
+
+                    local rand = hook.tickcount % 4
+                    if (rand ~= 1) then 
+                        return end 
+                    
+                    body.realOn = hook.command_number % 2; 
+                end; 
+
+                break_lagcomp = function (hook, body) 
+                    local table = body.lagcomp; 
+                    
+                    if (not table.enabled) then 
+                        return end 
+
+                    local last_break = table.lastbreak; 
+                    local current_vector = entity.get_local_player():get_origin(); 
+
+                    if (globals.tickcount <= table.break_until) then 
+                        table.lastbreak = current_vector; 
+                        hook.force_defensive = true; end 
+
+                    if (globals.tickcount + 100 <= table.break_until) then 
+                        table.break_until = 0; end 
+
+                    if (last_break:dist(current_vector) > table.breakevery) then 
+                        table.break_until = globals.tickcount + table.strenght; end 
+                end; 
+
+                stop_inverters = function (body) 
+                    local rand = utils.random_int(1, 30); 
+
+                    if (rand ~= 1) then 
+                        body.stop_inverters = false; 
+                        return end 
+
+                    body.stop_inverters = true; 
+                end; 
+
+                handler = function (self, hook, body) 
+                    self.quick_jitter(hook, body);
+                    self.break_lagcomp(hook, body);
+                end; 
+
+                init = function (self) 
+                    return {
+                        hook = self.handler
+                    }
+                end; 
+
+            }; 
+
+            post_handlers = {   
+
+                trigger_onshot = function (body) 
+                    local onshot_time = 2;
+                    body.onshot_till = globals.tickcount + onshot_time; 
+                end;
+
+                handle_onshot = function (hook, body) 
+                    if (body.onshot_till - 15 > hook.tickcount) then 
+                        body.onshot_till = 0; return end 
+
+                    if (body.onshot_till < hook.tickcount) then 
+                        return end 
+                        
+                    local modes = {
+
+                        Stop = function () 
+                            body.stop_inverters_till = body.onshot_till;
+                            print("Under onshot!");
+                        end;
+
+                    }; 
+                    modes[body.onshot_mode](); 
+                end;
+
+                run_handler = function (self, body) 
+                    events.cheat_shoot:set(
+                        function ()
+                            self.trigger_onshot(body); 
+                        end)
+                end; 
+
+                hook_handler = function (self, hook, body) 
+                    self.handle_onshot(hook, body)
+                end; 
+
+                init = function (self) 
+                    return {
+                        hook = function (hook, body) self:hook_handler(hook, body) end;
+                        _G = function (body) self:run_handler(body); end 
+                    }
+                end;
+            }; 
+
+            main = {
+
+                check_sanity = function () 
+                    local player_info = FW.localPlayer['=>'].info(); 
+                    
+                    if (player_info.manual_preShoot) then return false; end 
+
+                    if (player_info.nade_throwWait) then return false; end 
+
+                    if (player_info.on_ladder) then return false; end 
+
+                    if (player_info.on_use) then return false; end 
+
+                    if (not FW.game['=>'].get_info().round_started) then return false; end 
+
+                    return true; 
+                end;
+
+                init = function (self, body) 
+                    local storage = FW.angles._.storage.fakeangle; 
+                    local modifier = body.modifier:init(); 
+                    local yawbase = body.yawbase:init(); 
+                    local desync = body.desync:init(); 
+                    local exploits = body.exploits:init(); 
+                    local handlers = body.post_handlers:init(); 
+
+                    handlers._G(storage); 
+
+                    events.createmove:set(
+                        function (hook)
+                            if (not self.check_sanity()) then 
+                                return end 
+
+                            desync.hook(body.desync, hook, storage);
+
+                            yawbase.hook(hook); 
+                            
+                            exploits.hook(body.exploits, hook, storage)
+
+                            modifier.hook(body.modifier, hook, storage); 
+                            desync.hook(body.desync, hook, storage);
+
+                            events.antiaim_afterUpdate:call(hook);
+                            
+                            handlers.hook(hook, storage); 
+
+                        end)
+
+                end; 
+
+            }
 
         };
 
         init = function (self)
 
+            self.body_yaw.main:init(self.body_yaw); 
+
             events.createmove:set( 
                 function (cmd) 
-                    self.m_fakeAngle.setDefaultAngles(); 
-                    self.m_getTarget:main(cmd); 
-                    self.m_fakeAngle:applyAngles(cmd); 
-                    self.m_fakeAngle.inverter(cmd); 
-                    events.antiaim_afterUpdate:call(cmd);
-                    self.m_fakeAngle.handle_onshot(cmd); 
+                    self.m_getTarget:main(cmd);
                 end);
-
-            events.round_prestart:set(
-                function () 
-                    self.m_fakeAngle.changeUpdateEveryRound(); 
-                end)
-
-            events.cheat_shoot:set(
-                function () 
-                    self.m_fakeAngle.changeUpdateEveryRound(); 
-                    FW.angles._.storage.fakeangle.onshot_till = globals.tickcount + 2; 
-                end)
 
             events.local_death:set(
                 function (...)
@@ -471,7 +607,14 @@ FW.angles = {
 
         get_maximumDesync = function () 
             return FW.angles._.storage.fakeangle.maximum_desync; 
-        end 
+        end; 
+
+        configure_breakLagComp = function (enable, strength, distance)
+            local lagcomp = FW.angles._.storage.fakeangle.lagcomp; 
+            lagcomp.strenght = strength; 
+            lagcomp.enabled = enable; 
+            lagcomp.breakevery = distance; 
+        end
 
     }
 

@@ -16,7 +16,7 @@ FW.GL = {
                     if (struct.__rotation ~= nil) then render.push_rotation(struct.__rotation); end; 
                     if (struct.__clip[1] ~= nil) then render.push_clip_rect(struct.__clip[1], struct.__clip[2], false); end; 
 
-                    draw[struct.__renderStructure](unpack(struct.__arguments, 1, #struct.__arguments));
+                    pcall(draw[struct.__renderStructure], unpack(struct.__arguments, 1, #struct.__arguments)); 
 
                     if (struct.__rotation ~= nil) then render.pop_rotation(); end;   
                     if (struct.__clip[1] ~= nil) then render.pop_clip_rect(); end; 

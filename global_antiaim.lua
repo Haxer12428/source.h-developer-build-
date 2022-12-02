@@ -262,47 +262,27 @@ global.antiaim = {
 
             };
 
-            maximum_backtrackTime = {
-                break_until = 0; 
-                last_break = 0; 
+            break_lagcompensation = {
 
-                break_bt = function (self, cmd) 
-                    if (self.break_until >= globals.tickcount) then 
-                        print('breakin g')
-                        cmd.force_defensive = true; end 
+                configure = function () 
+                    local menu_elements = global.menu['=>'].get_elements(); 
+                    local enable = menu_elements.break_lagcomp:get(); 
+                    local strenght = menu_elements.lagcomp_strength:get(); 
+                    local distance = menu_elements.lagcomp_distance:get(); 
 
-                    local strenght = 2; 
-                    local minimal_to_trigger = 100; 
-                    local target = FW.angles['=>'].get_target(); 
+                    FW.angles['=>'].configure_breakLagComp(enable, strenght, distance); 
+                end;
 
-                    if (target == nil) then 
-                        return end 
+                init = function (self) 
+                    return {
+                        hook = self.configure
+                    }
+                end
 
-                    local target_bt = FW.entity['=>']:get_maximumBacktrackTime(target); 
-
-                    if (target_bt < minimal_to_trigger) then
-                        return end 
-
-                    if (self.last_break + target_bt*0.01 > globals.realtime) then 
-                        return end 
-                        
-                    self.last_break = globals.realtime; 
-                    self.break_until = globals.tickcount + strenght; 
-                end; 
-
-                handler = function (self) 
-                    if (self.break_until - 100 > globals.tickcount) then 
-                        self.break_until = 0; end 
-                end;  
-
-                init = function (self, cmd) 
-                    self:handler(); 
-                    self:break_bt(cmd); 
-                end; 
-
-            }; 
+            };
 
             init = function (self) 
+                local break_lagcompensation = self.break_lagcompensation:init(); 
 
                 events.missed_local:set(
                     function (...) 
@@ -312,7 +292,7 @@ global.antiaim = {
                 events.createmove:set(
                     function (cmd) 
                         self.antibruteforce.reset();
-                        --self.maximum_backtrackTime:init(cmd); 
+                        break_lagcompensation.hook(); 
                     end)
 
             end; 

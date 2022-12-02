@@ -80,7 +80,7 @@ global.menu._.other_elements.players_configList:update(
     global.user["=>"].get_userNamesWithConfigAvailable()[1] ~= nil and global.user["=>"].get_userNamesWithConfigAvailable() or {""}); 
 
 global.menu._.other_elements.load_playerConfig:set_callback(function ()
-    local name = global.menu._.other_elements.players_configList:get();
+    local name = global.menu._.other_elements.players_configList:get_list()[global.menu._.other_elements.players_configList:get()];
     global.user['=>'].load_playerConfig(name); 
 end)
 

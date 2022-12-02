@@ -15,6 +15,7 @@ FW.wGL = {};
 FW.GL = {}; 
 FW.userInput = {};
 FW.log = {}; 
+FW.cmd = {};
 
 local global = {}; 
 global.gui = {}; 

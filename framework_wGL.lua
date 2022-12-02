@@ -50,8 +50,8 @@ FW.wGL = {
                     if (not FW.userInput["=>"].key_press(1)) then 
                         return end 
 
-                    local position_start = __data.__main.position; 
-                    local position_end = position_start + __data.__main.size; 
+                    local position_start = __data.__main.position + __data.__main.move_position_a; 
+                    local position_end = position_start + __data.__main.move_position_b; 
 
                     if (not FW.mouse["=>"].is_inPosition(position_start, position_end)) then 
                         return end 
@@ -120,6 +120,8 @@ FW.wGL = {
                     __main = {
                         position = vector(300, 300); 
                         size = vector(1000, 1000);
+                        move_position_a = vector(0, 0); 
+                        move_position_b = vector(1000, 1000); 
                         color = color(0, 0, 0, 0); 
                         rounding = 0; 
 
@@ -154,6 +156,10 @@ FW.wGL = {
                         return 0; 
                     end; }; 
                 __storage = {}; 
+
+                override_mainFunctions = function (self, func)
+                    self.__run.main = func; 
+                end
             }; 
 
             structure.__data.__objects[#structure.__data.__objects+1] = object_structure; 
@@ -180,6 +186,11 @@ FW.wGL = {
         allow_move = function (structure, state)
             structure.__data.__main.inputs.allow_move = state; 
         end;   
+
+        set_movePositions = function (structure, position_a, position_b) 
+            structure.__data.__main.move_position_a = position_a; 
+            structure.__data.__main.move_position_b = position_b; 
+        end;
 
         block_input = function (structure, state) 
             structure.__data.__main.inputs.block_input = state; 

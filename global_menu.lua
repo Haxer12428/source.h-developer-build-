@@ -82,16 +82,29 @@ global.menu = {
 
             --#region tabs
 
+            self.icons = {
+                antiaim_builder = ui.get_icon("user-shield"); 
+                antiaim_settings = ui.get_icon('wrench');
+                antiaim_antibruteforce = ui.get_icon("redo-alt"); 
+                antiaim_exploits = ui.get_icon('code'); 
+
+                wifi = ui.get_icon("wifi"); 
+
+            }
+
             self.tabs = {
 
-                antiaim_info = ui.create("Anti Aim", "Anti-Aim [info]");
-                antiaim_builder = ui.create("Anti Aim", "Anti-Aim [builder]"); 
-                antiaim_options = ui.create("Anti Aim", "Anti Aim [options]");
-                antibruteforce = ui.create("Anti Aim", "Anti-Aim [anti-bruteforce]"); 
+            
+                antiaim_options = ui.create("Anti Aim", self.icons.antiaim_settings.." Anti Aim [options]");
+                antiaim_builder = ui.create("Anti Aim", self.icons.antiaim_builder .. " Anti-Aim [builder]");
+                antibruteforce = ui.create("Anti Aim", self.icons.antiaim_antibruteforce .. " Anti-Aim [anti-bruteforce]"); 
+                exploits = ui.create("Anti Aim", self.icons.antiaim_exploits .. " Exploits [main]");  
 
                 visuals_main = ui.create("Visuals", "Visuals [global]"); 
 
-                user_main = ui.create("User", "User [configs]")
+                user_main = ui.create("User", "User [configs]"); 
+
+                configs_main = ui.create("User", self.icons.wifi.." Configs [main]");
 
             }; 
 
@@ -102,7 +115,6 @@ global.menu = {
             self.elements = {
 
                 --preset = self.tabs.antiaim_global:combo("Preset", {"Agressive"});
-                self.tabs.antiaim_info:label("Featuring \a"..self.col.." source.h\a8EA3AFFF \nFirst neverlose.cc script containing fully custom bodyyaw \n \nIn development");
 
                 --self.tabs.user_main:label("Client: " .. get_cheat_username() .. "\n\nSubscription till: Infinity" );
                 import_config = self.tabs.user_main:button("      Import Config      "); 
@@ -123,10 +135,10 @@ global.menu = {
 
             }; 
 
-            self.other_elements.players_configList = self.tabs.user_main:combo("Player's Configs", {""});
-            self.other_elements.load_playerConfig = self.tabs.user_main:button("Load player config"); 
-            self.other_elements.load_myConfig = self.tabs.user_main:button("Load my config from database");
-            self.other_elements.save_myConfig = self.tabs.user_main:button("Save config");
+            self.other_elements.players_configList = self.tabs.configs_main:list("Player's Configs", {""});
+            self.other_elements.load_playerConfig = self.tabs.configs_main:button(ui.get_icon("user-plus").. " Load"); 
+            self.other_elements.save_myConfig = self.tabs.configs_main:button(ui.get_icon("upload").." Save my cfg");
+            self.other_elements.load_myConfig = self.tabs.configs_main:button(ui.get_icon('download').." Load my cfg");
 
             local indicator_subtab = self.elements.enable_indicator:create();  
             local antibruteNotify_subtab = self.elements.enable_antibrute_notify:create(); 
@@ -138,13 +150,19 @@ global.menu = {
             self.elements.antibrute_color = antibruteNotify_subtab:color_picker("Color", color(0, 230, 255, 255));
             self.elements.antibrute_reset_color = antibruteNotify_subtab:color_picker("Reset Color",  color(0, 230, 255, 255));
 
-            self:create_builder(); 
+            self.elements.break_lagcomp = self.tabs.exploits:switch("Break Lagcomp", false); 
+            local exploit_subtab = self.elements.break_lagcomp:create(); 
+
+            self.elements.lagcomp_distance = exploit_subtab:slider("Distance", 10, 500, 150);
+            self.elements.lagcomp_strength = exploit_subtab:slider("Strength", 1, 6, 2);
 
             self.tooltips = {
 
                 self.elements.antibruteforce_enable:set_tooltip("Antibruteforce is modules that doesn't allow resolvers to 'bruteforce' your angles with data from last miss. \nBasically in most cases enemy will miss again.");
 
             }
+            self:create_builder(); 
+            
 
         end;  
 
