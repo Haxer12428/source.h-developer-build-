@@ -1,0 +1,6 @@
+Me from 2024: This code is a fucking masterpiece for neverlose I didn't really belived that I coded soo good at that time! I remember when I couldn't think of how to do config system based on a motherfucking for (v,k) loop in lua....
+Now im coding a motherfucking 2d gui library on top of imgui, opengl and glfw (+ some other like json, glm etc) but I hated time I wrote this atm but I think it was one of the best momement's in my life. Better one was on old nvl
+that was a motherfucking dream. I hated it that resolver was missing but that was the whole fun. Rushing 4 ppl with tec9 and everytime killing them all cause my motherfucking lua written by 15yo at the time was better than paid
+luas those fukcer used that were coded by 'real' developers, they might be developers in hvh community but no motherfucker at that time coded this good of a code. They were aiming for simplicity when I was aiming for best performance
+. Simplicity in my term is lack of skill. Simpler your code the better but if you write a spaggeti and call it 'simplicity' trust me no real developer will belive your lies! Thats all for now (still no gf btw). For future me: keep it real
+current moments are better when you get past them!
